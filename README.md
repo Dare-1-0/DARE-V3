@@ -133,3 +133,14 @@ npm start
 ```bash
 npm i -g pm2 && pm2 start index.js && pm2 save && pm2 logs
 ```
+## Community Support
+
+If you need help, Join our WhatsApp channel
+
+[![NIMAYT](https://img.shields.io/badge/WHATSAPP%20CHANNEL-green?style=for-the-badge&logo=whatsapp&logoColor=white)](https://whatsapp.com/channel/0029VajhqUnD38COHw1aSy0M)</br>
+
+
+
+### Credits to:
+`much thanks to
+- [`PATRON 🚺`](https://github.com/Itzpatron) in bot development 
