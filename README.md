@@ -19,7 +19,7 @@ DARE-V3 Multi Device is a automated whatsapp bot created by <a href="https://git
 
 ### WANT TO USE BOT HOSTING OR KATABUMP 0 COINS? DOWNLOAD THIS
  
-<a href="https://devuploads.com/h1u6arhq80vf"><img src="https://img.shields.io/badge/PATRON MD-green" alt="Click Here to Get QR-Code" width="90"></a>
+<a href="https://devuploads.com/h1u6arhq80vf"><img src="https://img.shields.io/badge/B.M.B-red" alt="Click Here to Get QR-Code" width="90"></a>
 
 ------
 
