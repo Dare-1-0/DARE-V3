@@ -142,5 +142,5 @@ If you need help, Join our WhatsApp channel
 
 
 ### Credits to:
-`much thanks to
+`much thanks to`
 - [`PATRON 🚺`](https://github.com/Itzpatron) in bot development 
