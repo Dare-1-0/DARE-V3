@@ -4,7 +4,7 @@ const {
 	downloadContentFromMessage
 } = require('@whiskeysockets/baileys')
 const { modul } = require('./module')
-const ytdl = require('@distube/ytdl-core');
+const ytdl = require('@distube/ytdl-core')
 const { os, axios, baileys, chalk, cheerio, child_process, crypto, cookie, FormData, FileType, fetch, fs, fsx, ffmpeg, Jimp, jsobfus, PhoneNumber, process, moment, ms, speed, syntaxerror, util, googleTTS, nodecron, maker } = modul
 const { exec, spawn, execSync } = require('child_process');
 const { BufferJSON, WA_DEFAULT_EPHEMERAL, generateWAMessageFromContent, proto, generateWAMessageContent, generateWAMessage, prepareWAMessageMedia, areJidsSameUser, getContentType, generateForwardMessageContent } = baileys
@@ -38543,3 +38543,4 @@ isForwarded: true
 process.on('uncaughtException', function (err) {
 console.log('Caught exception: ', err)
 })
+
