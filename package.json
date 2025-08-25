@@ -22,7 +22,7 @@
   "author": "BMB",
   "license": "MIT",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
+    "@whiskeysockets/baileys": "github:holyrag/XD-Baileys",
     "axios": "^1.6.8",
     "cfonts": "^3.3.0",
     "sharp": "^0.32.6",
@@ -97,6 +97,7 @@
     "spotifydl-x": "^0.3.0",
     "ssh2": "^1.14.0",
     "yargs": "^17.7.2",
+    "url": "^0.11.4",
     "youtube-yts": "^2.0.0",
     "ytdl-core": "^4.11.5",
     "syntax-error": "^1.4.0",
