@@ -666,7 +666,8 @@ Dare.sendFile = async (jid, path, filename = '', caption = '', quoted, ptt = fal
         //else type = "document"
         //return Dare.sendMessage(jid, { [type]: file.data, ...options }, { ...options })
       //}
-
+    // Add your methods inside the async function
+async function DareInd() {
     // Add your methods inside the async function
     Dare.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
         let res = await axios.head(url);
@@ -693,7 +694,7 @@ Dare.sendFile = async (jid, path, filename = '', caption = '', quoted, ptt = fal
         return Dare.sendMessage(jid, { poll: { name, values, selectableCount } });
     };
 
-    return Dare; // ✅ valid here inside the async function
+    return Dare; // valid here, inside DareInd()
 }
 
 // Initialize bot
@@ -704,3 +705,4 @@ DareInd().then(Dare => {
 process.on('uncaughtException', function (err) {
     console.log('Caught exception: ', err);
 });
+    
