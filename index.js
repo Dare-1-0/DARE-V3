@@ -176,7 +176,7 @@ async function DareInd() {
     console.log(chalk.white.bold(`⠀⠀⠀⠀⠀⠀⠀⠀⢀⠔⢉⠄⠚⢉⡀⢀⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⢺⡤⠔⣵⣿⣿⣷⣿⣷⣢⣄⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⢠⠓⡢⠝⠚⠉⠉⠉⠙⠛⠿⣿⣿⡗⢄⡀⠀⠀⠀⡀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠜⣈⡠⠒⢨⠁⠀⠀⠀⢀⠄⠈⠻⣿⡄⠳⡄⠀⠀⡷⡀
+⠀⠀⠀⠀⠀⠀⠀⠀⠜⣈⡠⠒��⠁⠀⠀⠀⢀⠄⠈⠻⣿⡄⠳⡄⠀⠀⡷⡀
 ⠀⠀⠀⠀⠀⠀⠀⣜⢰⢡⠤⣀⠈⢴⢀⣄⠔⠃⠊⢆⠀⠈⢿⣄⣿⣄⣠⡧⣿
 ⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⡄⢻⠃⠀⠀⠈⠁⠀⠀⠀⢠⠤⢤⡀⠱⠇⣼⣿⣿⣿⡽⣧⡎
 ⠀⠀⠀⠀⠀⠀⠀⠀⡨⢚⣒⡇⠀⠀⠀⠸⠀⠈⠑⡀⠀⠀⠀⢉⠜⣠⣿⣿⣿⡿⣵⡿⢳
@@ -207,18 +207,23 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
     if (useMobile) throw new Error('Cannot use pairing code with mobile api');
 
     try {
-      // Clean any provided phone number; if there's no numeric content, prompt the user
-      let pn = (phoneNumber || '').replace(/[^0-9]/g, '');
-      if (!pn) {
-        pn = await question(chalk.bgBlack(chalk.greenBright(`ENTER YOUR PHONE NUMBER\nE.G: 2348077115562 : `)));
-        pn = (pn || '').replace(/[^0-9]/g, '');
-        rl.close();
-      }
+      // Always prompt for phone number when pairing. If a --phone value was provided, show it as the default.
+      const defaultPN = (phoneNumber || '').replace(/[^0-9]/g, '');
+      const promptText = defaultPN
+        ? chalk.bgBlack(chalk.greenBright(`ENTER YOUR PHONE NUMBER\nE.G: 2348077115562 : `)) + chalk.white(` (Press Enter to use ${defaultPN}) `)
+        : chalk.bgBlack(chalk.greenBright(`ENTER YOUR PHONE NUMBER\nE.G: 2348077115562 : `));
 
-      // if (!Object.keys(PHONENUMBER_MCC || {}).some(v => pn.startsWith(v))) {
-      //   console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : 2348077115562")));
-      //   process.exit(0);
-      // }
+      let pnInput = await question(promptText);
+      pnInput = (pnInput || '').replace(/[^0-9]/g, '');
+      const pn = pnInput || defaultPN;
+
+      // close readline once we've collected input
+      try { rl.close(); } catch (e) {}
+
+      if (!pn) {
+        console.error('No phone number provided. Aborting pairing code request.');
+        return;
+      }
 
       setTimeout(async () => {
         try {
@@ -530,180 +535,4 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
   Dare.copyNForward = async (jid, message, forceForward = false, options = {}) => {
     try {
       if (options.readViewOnce) {
-        message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefined);
-        const vtype = Object.keys(message.message.viewOnceMessage.message)[0];
-        delete message.message.viewOnceMessage.message[vtype].viewOnce;
-        message.message = { ...message.message.viewOnceMessage.message };
-      }
-      const mtype = Object.keys(message.message)[0];
-      const content = await generateForwardMessageContent(message, forceForward);
-      const ctype = Object.keys(content)[0];
-      let context = {};
-      if (mtype != "conversation") context = message.message[mtype].contextInfo || {};
-      content[ctype].contextInfo = { ...context, ...content[ctype].contextInfo };
-      const waMessage = await generateWAMessageFromContent(jid, content, options ? {
-        ...content[ctype],
-        ...options,
-        ...(options.contextInfo ? { contextInfo: { ...content[ctype].contextInfo, ...options.contextInfo } } : {})
-      } : {});
-      await Dare.relayMessage(jid, waMessage.message, { messageId: waMessage.key.id });
-      return waMessage;
-    } catch (e) {
-      console.error('copyNForward error:', e);
-    }
-  };
-
-  Dare.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
-    let quoted = message.msg ? message.msg : message;
-    let mime = (message.msg || message).mimetype || '';
-    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
-    const stream = await downloadContentFromMessage(quoted, messageType);
-    let buffer = Buffer.from([]);
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-    let type = await FileType.fromBuffer(buffer);
-    const trueFileName = attachExtension ? (filename + '.' + (type?.ext || 'bin')) : filename;
-    await fs.promises.writeFile(trueFileName, buffer);
-    return trueFileName;
-  };
-
-  Dare.downloadMediaMessage = async (message) => {
-    let mime = (message.msg || message).mimetype || '';
-    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
-    const stream = await downloadContentFromMessage(message, messageType);
-    let buffer = Buffer.from([]);
-    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
-    return buffer;
-  };
-
-  Dare.getFile = async (PATH, save) => {
-    let res = null;
-    let data = Buffer.isBuffer(PATH) ? PATH
-      : /^data:.*?\/. *?;base64,/i.test(PATH) ? Buffer.from(PATH.split`, `[1], 'base64')
-      : /^https?:\/\//.test(PATH) ? (res = await getBuffer(PATH), res) : fs.existsSync(PATH) ? fs.readFileSync(PATH) : null;
-    if (!data) throw new Error('getFile: invalid path or data');
-    let type = await FileType.fromBuffer(data) || { mime: 'application/octet-stream', ext: 'bin' };
-    const filename = path.join(process.cwd(), './lib' + Date.now() + '.' + type.ext);
-    if (data && save) await fs.promises.writeFile(filename, data);
-    return {
-      res,
-      filename,
-      size: await getSizeMedia(data),
-      ...type,
-      data
-    };
-  };
-
-  Dare.sendMedia = async (jid, path, fileName = '', caption = '', quoted = '', options = {}) =>{
-    let types = await Dare.getFile(path, true);
-    let { mime, ext, res, data, filename } = types;
-    if (res && res.status !== 200) {
-      try { throw { json: JSON.parse(data.toString()) } } catch (e) { if (e.json) throw e.json; }
-    }
-    let type = '', mimetype = mime, pathFile = filename;
-    if (options.asDocument) type = 'document';
-    if (options.asSticker || /webp/.test(mime)) {
-      const { writeExif } = require('./lib/exif');
-      let media = { mimetype: mime, data };
-      pathFile = await writeExif(media, { packname: options.packname || global.packname, author: options.author || global.author, categories: options.categories || [] });
-      try { await fs.promises.unlink(filename); } catch (e) {}
-      type = 'sticker';
-      mimetype = 'image/webp';
-    } else if (/image/.test(mime)) type = 'image';
-    else if (/video/.test(mime)) type = 'video';
-    else if (/audio/.test(mime)) type = 'audio';
-    else type = 'document';
-    await Dare.sendMessage(jid, { [type]: { url: pathFile }, caption, mimetype, fileName, ...options }, { quoted, ...options });
-    try { await fs.promises.unlink(pathFile); } catch (e) {}
-  };
-
-  // Generic sendFile wrapper with improved handling
-  Dare.sendFile = async (jid, pathArg, filename = '', caption = '', quoted, ptt = false, options = {}) => {
-    let type = await Dare.getFile(pathArg, true);
-    let { res, data: file, filename: pathFile } = type;
-    if (res && res.status !== 200) {
-      try { throw { json: JSON.parse(file.toString()) } } catch (e) { if (e.json) throw e.json; }
-    }
-    if (!type) options.asDocument = true;
-    let mtype = '', mimetype = type.mime, convert;
-    if (/webp/.test(type.mime) || (/image/.test(type.mime) && options.asSticker)) mtype = 'sticker';
-    else if (/image/.test(type.mime) || (/webp/.test(type.mime) && options.asImage)) mtype = 'image';
-    else if (/video/.test(type.mime)) mtype = 'video';
-    else if (/audio/.test(type.mime)) {
-      // No local conversion functions provided in this repo snippet; send as audio
-      mtype = 'audio';
-      mimetype = type.mime;
-    } else mtype = 'document';
-    if (options.asDocument) mtype = 'document';
-    delete options.asSticker; delete options.asLocation; delete options.asVideo; delete options.asDocument; delete options.asImage;
-    let message = { ...options, caption, ptt, [mtype]: { url: pathFile }, mimetype };
-    let m;
-    try {
-      m = await Dare.sendMessage(jid, message, { filename, quoted, ...options });
-    } catch (e) {
-      m = null;
-    } finally {
-      if (!m) m = await Dare.sendMessage(jid, { ...message, [mtype]: file }, { filename, quoted, ...options });
-      file = null;
-      return m;
-    }
-  };
-
-  // sendTextWithMentions
-  Dare.sendTextWithMentions = async (jid, text, quoted, options = {}) => {
-    const mentioned = [...text.matchAll(/@(\d{0,16})/g)].map(v => v[1] + '@s.whatsapp.net');
-    return Dare.sendMessage(jid, { text, contextInfo: { mentionedJid: mentioned }, ...options }, { quoted });
-  };
-
-  // sendPoll helper
-  Dare.sendPoll = (jid, name = '', values = [], selectableCount = 1) => {
-    return Dare.sendMessage(jid, { poll: { name, values, selectableCount } });
-  };
-
-  // sendFileUrl helper
-  Dare.sendFileUrl = async (jid, url, caption, quoted, options = {}) => {
-    try {
-      let res = await axios.head(url);
-      let mime = res.headers['content-type'] || 'application/octet-stream';
-      if (mime.includes('gif')) {
-        return Dare.sendMessage(jid, { video: await getBuffer(url), caption, gifPlayback: true, ...options }, { quoted, ...options });
-      }
-      if (mime === "application/pdf") {
-        return Dare.sendMessage(jid, { document: await getBuffer(url), mimetype: 'application/pdf', caption, ...options }, { quoted, ...options });
-      }
-      if (mime.split("/")[0] === "image") {
-        return Dare.sendMessage(jid, { image: await getBuffer(url), caption, ...options }, { quoted, ...options });
-      }
-      if (mime.split("/")[0] === "video") {
-        return Dare.sendMessage(jid, { video: await getBuffer(url), caption, mimetype: 'video/mp4', ...options }, { quoted, ...options });
-      }
-      if (mime.split("/")[0] === "audio") {
-        return Dare.sendMessage(jid, { audio: await getBuffer(url), caption, mimetype: 'audio/mpeg', ...options }, { quoted, ...options });
-      }
-      return Dare.sendMessage(jid, { document: await getBuffer(url), mimetype: mime, caption, ...options }, { quoted, ...options });
-    } catch (e) {
-      console.error('sendFileUrl error:', e?.message || e);
-    }
-  };
-
-  Dare.public = false;
-
-  // start spinner and wait
-  try {
-    await delay(5555);
-    start('2', colors.bold.white('\n\nWaiting for New Messages..'));
-  } catch (e) { /* ignore */ }
-
-  return Dare;
-}
-
-// Run the bot
-DareInd().then(Dare => {
-  console.log("Bot started successfully");
-}).catch(err => {
-  console.error("Failed to start bot:", err);
-  process.exit(1);
-});
-
-process.on('uncaughtException', function (err) {
-  console.log('Caught exception: ', err);
-});
+        message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefine[...
