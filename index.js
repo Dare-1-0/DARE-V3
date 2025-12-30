@@ -73,6 +73,10 @@ let _left = safeReadJSON('./database/left.json', []);
 const prefix = '.';
 let phoneNumber = ""; 
 
+// accept --phone=... CLI arg
+const phoneArg = process.argv.find(a => a.startsWith('--phone='));
+if (phoneArg) phoneNumber = (phoneArg.split('=')[1] || '').replace(/[^0-9]/g, '');
+
 // Load or initialize global db safely
 global.db = safeReadJSON('./database/database.json', {});
 if (!global.db || typeof global.db !== 'object') global.db = {};
@@ -174,8 +178,8 @@ async function DareInd() {
 ⠀⠀⠀⠀⠀⠀⠀⠀⢠⠓⡢⠝⠚⠉⠉⠉⠙⠛⠿⣿⣿⡗⢄⡀⠀⠀⠀⡀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠜⣈⡠⠒⢨⠁⠀⠀⠀⢀⠄⠈⠻⣿⡄⠳⡄⠀⠀⡷⡀
 ⠀⠀⠀⠀⠀⠀⠀⣜⢰⢡⠤⣀⠈⢴⢀⣄⠔⠃⠊⢆⠀⠈⢿⣄⣿⣄⣠⡧⣿
-⠀⠀⠀⠀⢀⠤⡄⢻⠃⠀⠀⠈⠁⠀⠀⠀⢠⠤⢤⡀⠱⠇⣼⣿⣿⣿⡽⣧⡎
-⠀⠀⠀⠀⡨⢚⣒⡇⠀⠀⠀⠸⠀⠈⠑⡀⠀⠀⠀⢉⠜⣠⣿⣿⣿⡿⣵⡿⢳
+⠀⠀⠀⠀⠀⠀⠀⠀⢀⠤⡄⢻⠃⠀⠀⠈⠁⠀⠀⠀⢠⠤⢤⡀⠱⠇⣼⣿⣿⣿⡽⣧⡎
+⠀⠀⠀⠀⠀⠀⠀⠀⡨⢚⣒⡇⠀⠀⠀⠸⠀⠈⠑⡀⠀⠀⠀⢉⠜⣠⣿⣿⣿⡿⣵⡿⢳
 ⠀⠀⢀⡀⢼⡁⢐⡱⡀⠀⠀⠘⡀⠀⠐⠁⠀⠀⣀⣲⣺⣿⣿⣿⣿⣿⠿⠛⠁
 ⠀⠀⠸⢤⡖⣵⠋⠀⢸⣧⣀⡀⠀⠀⠀⠀⠀⢠⡗⣦⣾⢿⣯⣻⣿⠇⠀⠀⠀
 ⠀⠀⠀⠘⠧⡈⡲⢤⣯⣿⡇⢉⣱⣖⣶⣺⣿⠶⢉⣏⢰⣶⣿⣿⠏⠀⠀⠀⠀
@@ -192,7 +196,8 @@ ${chalk.green.bold("📃  Information :")}
 ✈ BOT BY DARE TECH, Note : Do Not Misuse This Bot 
 ✈ DARE-V4 CREDIT BMB : 2348089405509
 
-${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸𝙽")}\n`));
+${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸𝙽")}
+`));
   } catch (e) {
     // ignore banner errors
   }
@@ -217,9 +222,27 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
 
       setTimeout(async () => {
         try {
-          let code = await Dare.requestPairingCode(pn);
-          code = code?.match(/.{1,4}/g)?.join("-") || code;
-          console.log(chalk.black(chalk.bgGreen(`PAIRING CODE = `)), chalk.black(chalk.white(code)));
+          console.log('Requesting pairing code for:', pn);
+          console.log('requestPairingCode available?', typeof Dare.requestPairingCode);
+          if (typeof Dare.requestPairingCode === 'function') {
+            try {
+              let code = await Dare.requestPairingCode(pn);
+              code = code?.match(/.{1,4}/g)?.join("-") || code;
+              console.log(chalk.black(chalk.bgGreen(`PAIRING CODE = `)), chalk.black(chalk.white(code)));
+            } catch (e) {
+              console.error('Error while calling requestPairingCode:', e?.message || e);
+            }
+          } else {
+            console.warn('requestPairingCode() not available on this Baileys build. Falling back to QR output from connection.update.');
+            // print the QR when it arrives so you can scan with the phone
+            Dare.ev.on('connection.update', up => {
+              if (up.qr) {
+                console.log('----- SCAN THIS QR (BASE64 STRING) -----');
+                console.log(up.qr);
+                console.log('----------------------------------------');
+              }
+            });
+          }
         } catch (e) {
           console.error('Error requesting pairing code:', e?.message || e);
         }
@@ -431,7 +454,7 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
   };
 
   Dare.parseMention = (text = '') => {
-    return [...text.matchAll(/@([0-9]{5,16}|0)/g)].map(v => v[1] + '@s.whatsapp.net');
+    return [...text.matchAll(/@(\d{5,16}|0)/g)].map(v => v[1] + '@s.whatsapp.net');
   };
 
   Dare.sendContact = async (jid, kon, quoted = '', opts = {}) => {
@@ -474,7 +497,7 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
 
   Dare.sendImage = async (jid, path, caption = '', quoted = '', options = {}) => {
     let buffer = Buffer.isBuffer(path) ? path
-      : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64')
+      : /^data:.*?\/. *?;base64,/i.test(path) ? Buffer.from(path.split`, `[1], 'base64')
       : /^https?:\/\//.test(path) ? await getBuffer(path)
       : fs.existsSync(path) ? fs.readFileSync(path) : null;
     if (!buffer) throw new Error('Invalid image');
@@ -483,7 +506,7 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
 
   Dare.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
     let buff = Buffer.isBuffer(path) ? path
-      : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64')
+      : /^data:.*?\/. *?;base64,/i.test(path) ? Buffer.from(path.split`, `[1], 'base64')
       : /^https?:\/\//.test(path) ? await getBuffer(path)
       : fs.existsSync(path) ? fs.readFileSync(path) : null;
     if (!buff) throw new Error('Invalid image');
@@ -495,7 +518,7 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
 
   Dare.sendVideoAsSticker = async (jid, path, quoted, options = {}) => {
     let buff = Buffer.isBuffer(path) ? path
-      : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64')
+      : /^data:.*?\/. *?;base64,/i.test(path) ? Buffer.from(path.split`, `[1], 'base64')
       : /^https?:\/\//.test(path) ? await getBuffer(path)
       : fs.existsSync(path) ? fs.readFileSync(path) : null;
     if (!buff) throw new Error('Invalid video');
@@ -555,7 +578,7 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
   Dare.getFile = async (PATH, save) => {
     let res = null;
     let data = Buffer.isBuffer(PATH) ? PATH
-      : /^data:.*?\/.*?;base64,/i.test(PATH) ? Buffer.from(PATH.split`,`[1], 'base64')
+      : /^data:.*?\/. *?;base64,/i.test(PATH) ? Buffer.from(PATH.split`, `[1], 'base64')
       : /^https?:\/\//.test(PATH) ? (res = await getBuffer(PATH), res) : fs.existsSync(PATH) ? fs.readFileSync(PATH) : null;
     if (!data) throw new Error('getFile: invalid path or data');
     let type = await FileType.fromBuffer(data) || { mime: 'application/octet-stream', ext: 'bin' };
