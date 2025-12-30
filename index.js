@@ -17,11 +17,7 @@ import { modul } from './module.js';
 import moment from 'moment-timezone';
 import DareConnect, {
   BufferJSON,
-  PHONENUMBER_MCC,
-  initInMemoryKeyStore,
   DisconnectReason,
-  AnyMessageContent,
-  makeInMemoryStore,
   useMultiFileAuthState,
   delay,
   fetchLatestBaileysVersion,
@@ -75,7 +71,7 @@ let _welcome = safeReadJSON('./database/welcome.json', []);
 let _left = safeReadJSON('./database/left.json', []);
 
 const prefix = '.';
-let phoneNumber = "T.me/The_Kelvin";
+let phoneNumber = ""; 
 
 // Load or initialize global db safely
 global.db = safeReadJSON('./database/database.json', {});
@@ -99,17 +95,17 @@ const owner = safeReadJSON('./database/owner.json', {});
 const sessionName = (global && global.sessionName) ? global.sessionName : 'session';
 
 // store and readline
-const store = makeInMemoryStore({ logger: Pino().child({ level: 'silent', stream: 'store' }) });
+const store = null; // makeInMemoryStore({ logger: Pino().child({ level: 'silent', stream: 'store' }) });
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 // Watch Case.js for changes (if loader exists)
-try {
-  import('./Case.js');
-  nocache('./Case.js', module => console.log(color('[ CHANGE ]', 'green'), color(`'${module}'`, 'green'), 'Updated'));
-} catch (e) {
-  // ignore if Case.js not present or dynamic import fails during static analysis
-}
+// try {
+//   import('./Case.js');
+//   nocache('./Case.js', module => console.log(color('[ CHANGE ]', 'green'), color(`'${module}'`, 'green'), 'Updated'));
+// } catch (e) {
+//   // ignore if Case.js not present or dynamic import fails during static analysis
+// }
 
 /**
  * Main initializer that creates the connection (Dare) and wires event handlers & helpers.
@@ -169,7 +165,7 @@ async function DareInd() {
   });
 
   // Bind event emitter store
-  store.bind(Dare.ev);
+  if (store) store.bind(Dare.ev);
 
   // Small banner (keeps previous style)
   try {
@@ -202,28 +198,22 @@ ${chalk.green.bold("𝙿𝚘𝚠𝚎𝚛𝚎𝚍 𝚋𝚢 𝙺𝙴𝙻𝚅𝙸�
   }
 
   // Pairing code flow (if requested)
-  if (pairingCode && !Dare?.authState?.creds?.registered) {
+  if (pairingCode) {
     if (useMobile) throw new Error('Cannot use pairing code with mobile api');
 
     try {
-      let pn = phoneNumber;
-      if (!!pn) {
-        pn = pn.replace(/[^0-9]/g, '');
-
-        if (!Object.keys(PHONENUMBER_MCC || {}).some(v => pn.startsWith(v))) {
-          console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : 2348077115562")));
-          process.exit(0);
-        }
-      } else {
+      // Clean any provided phone number; if there's no numeric content, prompt the user
+      let pn = (phoneNumber || '').replace(/[^0-9]/g, '');
+      if (!pn) {
         pn = await question(chalk.bgBlack(chalk.greenBright(`ENTER YOUR PHONE NUMBER\nE.G: 2348077115562 : `)));
-        pn = pn.replace(/[^0-9]/g, '');
-        if (!Object.keys(PHONENUMBER_MCC || {}).some(v => pn.startsWith(v))) {
-          console.log(chalk.bgBlack(chalk.redBright("START WITH YOUR COUNTRY CODE, EXAMPLE: 2348089405509")));
-          pn = await question(chalk.bgBlack(chalk.greenBright(`TYPE YOUR WHATSAPP NUMBER\nEXAMPLE: 2348077115562 : `)));
-          pn = pn.replace(/[^0-9]/g, '');
-        }
+        pn = (pn || '').replace(/[^0-9]/g, '');
         rl.close();
       }
+
+      // if (!Object.keys(PHONENUMBER_MCC || {}).some(v => pn.startsWith(v))) {
+      //   console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : 2348077115562")));
+      //   process.exit(0);
+      // }
 
       setTimeout(async () => {
         try {
