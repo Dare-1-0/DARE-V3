@@ -43,7 +43,11 @@ let { version, isLatest } = await fetchLatestBaileysVersion();
  let simple = require('./index')
 if (!Dare.authState.creds.registered) {
       setTimeout(async () => {
-         let phoneNumber = `${text}`  
+         let phoneNumber = `${text}`.replace(/[^0-9]/g, '')
+         if (!phoneNumber) {
+           await m.reply('Please provide the phone number to pair with, e.g., `.jadibot 2348077115562`')
+           return
+         }
          console.log(chalk.red.bold(`[ Jadibot ] -> (+${phoneNumber})`))
          let code = await Dare.requestPairingCode(phoneNumber)
          let hasilcode = code?.match(/.{1,4}/g)?.join("-") || code
